@@ -5,7 +5,6 @@
 import { apiClient, handleAPIError } from '@/lib/api';
 import {
   FacebookPagesResponse,
-  FacebookOAuthResponse,
   FacebookUserProfile,
 } from './types';
 
@@ -13,8 +12,9 @@ export const facebookAPI = {
   /**
    * Initiate Facebook OAuth flow
    * Returns OAuth URL to redirect user to Facebook
+   * @param popup - If true, returns URL configured for popup mode
    */
-  createToken: async (): Promise<string> => {
+  createToken: async (popup: boolean = false): Promise<string> => {
     try {
       const token = apiClient.getToken();
       
@@ -24,6 +24,7 @@ export const facebookAPI = {
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` }),
         },
+        body: JSON.stringify({ popup }),
       });
 
       if (!response.ok) {
@@ -38,6 +39,11 @@ export const facebookAPI = {
       // Backend returns nested structure: { success, message, data: { auth_url } }
       if (data.success && data.data?.auth_url) {
         return data.data.auth_url;
+      }
+
+      // Also check for oauth_url in case backend returns different structure
+      if (data.oauth_url) {
+        return data.oauth_url;
       }
 
       throw new Error('OAuth URL not received from server');

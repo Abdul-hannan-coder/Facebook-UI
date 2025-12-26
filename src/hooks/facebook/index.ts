@@ -41,14 +41,88 @@ export const useFacebook = (): UseFacebookReturn => {
 
   /**
    * Initiate Facebook OAuth connection
-   * Redirects user to Facebook OAuth page
+   * Opens Facebook OAuth in a popup window
    */
   const connectFacebook = useCallback(async () => {
     dispatch({ type: 'FACEBOOK_CONNECT_START' });
     try {
-      const oauthUrl = await facebookAPI.createToken();
-      // Redirect to Facebook OAuth
-      window.location.href = oauthUrl;
+      // Request OAuth URL in popup mode
+      const oauthUrl = await facebookAPI.createToken(true);
+      
+      // Open popup window
+      const popup = window.open(
+        oauthUrl,
+        'facebook-oauth',
+        'width=600,height=700,left=' + (window.screen.width - 600) / 2 + ',top=' + (window.screen.height - 700) / 2 + ',toolbar=no,menubar=no,scrollbars=yes,resizable=yes,location=no,directories=no,status=no'
+      );
+
+      if (!popup) {
+        throw new Error('Popup blocked. Please allow popups for this site.');
+      }
+
+      // Listen for popup messages
+      const messageHandler = (event: MessageEvent) => {
+        // Verify origin (adjust based on your backend domain)
+        const allowedOrigins = [
+          window.location.origin,
+          'https://backend.postsiva.com',
+          process.env.NEXT_PUBLIC_API_BASE_URL || '',
+        ].filter(Boolean);
+
+        if (!allowedOrigins.includes(event.origin)) {
+          return;
+        }
+
+        if (event.data.type === 'FACEBOOK_OAUTH_SUCCESS') {
+          window.removeEventListener('message', messageHandler);
+          popup.close();
+          
+          // Refresh token status
+          checkToken().then(() => {
+            dispatch({ type: 'FACEBOOK_CONNECT_SUCCESS' });
+            // Fetch pages after successful connection
+            fetchPages().catch(() => {
+              // Error handled by hook
+            });
+          });
+        } else if (event.data.type === 'FACEBOOK_OAUTH_ERROR') {
+          window.removeEventListener('message', messageHandler);
+          popup.close();
+          
+          const errorMessage = event.data.error || 'Facebook connection failed';
+          dispatch({
+            type: 'FACEBOOK_FAILURE',
+            payload: { error: errorMessage },
+          });
+        }
+      };
+
+      window.addEventListener('message', messageHandler);
+
+      // Check if popup is closed manually
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosed);
+          window.removeEventListener('message', messageHandler);
+          
+          // Only show error if connection wasn't successful
+          if (!state.isConnected) {
+            dispatch({
+              type: 'FACEBOOK_FAILURE',
+              payload: { error: 'Connection cancelled' },
+            });
+          }
+        }
+      }, 500);
+
+      // Cleanup after timeout (5 minutes)
+      setTimeout(() => {
+        clearInterval(checkClosed);
+        window.removeEventListener('message', messageHandler);
+        if (!popup.closed) {
+          popup.close();
+        }
+      }, 5 * 60 * 1000);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to connect Facebook';
@@ -58,7 +132,7 @@ export const useFacebook = (): UseFacebookReturn => {
       });
       throw error;
     }
-  }, []);
+  }, [checkToken, fetchPages, state.isConnected]);
 
   /**
    * Disconnect Facebook (clear local state)

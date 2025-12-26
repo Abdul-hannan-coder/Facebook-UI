@@ -11,15 +11,25 @@ import { useState } from 'react';
 export function FacebookConnect() {
   const { connectFacebook, isConnecting, error, resetError } = useFacebook();
   const [isConnectingState, setIsConnectingState] = useState(false);
+  const [popupBlocked, setPopupBlocked] = useState(false);
 
   const handleConnect = async () => {
     setIsConnectingState(true);
+    setPopupBlocked(false);
     resetError();
     try {
       await connectFacebook();
-      // User will be redirected to Facebook OAuth
+      // Popup will handle the OAuth flow
+      // State will be updated via message listener
     } catch (err) {
       setIsConnectingState(false);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to connect Facebook';
+      
+      // Check if it's a popup blocked error
+      if (errorMessage.includes('popup') || errorMessage.includes('blocked')) {
+        setPopupBlocked(true);
+      }
+      
       console.error('Failed to connect Facebook:', err);
     }
   };
@@ -47,18 +57,29 @@ export function FacebookConnect() {
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-red-800">{error}</p>
+            {popupBlocked && (
+              <p className="text-sm text-red-700 mt-2">
+                Please allow popups for this site and try again.
+              </p>
+            )}
           </div>
         )}
 
         <button
           onClick={handleConnect}
           disabled={isConnecting || isConnectingState}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"                                                                      
         >
           {isConnecting || isConnectingState
-            ? 'Connecting to Facebook...'
+            ? 'Opening Facebook connection...'
             : 'Connect Facebook'}
         </button>
+        
+        {isConnecting || isConnectingState ? (
+          <p className="text-sm text-gray-500 text-center">
+            A popup window will open for Facebook authentication. Please complete the process in the popup.
+          </p>
+        ) : null}
 
         <p className="text-sm text-gray-500 text-center">
           By connecting, you agree to grant necessary permissions for managing

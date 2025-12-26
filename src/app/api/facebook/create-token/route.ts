@@ -13,6 +13,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const body = await request.json().catch(() => ({}));
+    const isPopup = body.popup === true;
+
     const response = await fetch(`${BACKEND_URL}/facebook/create-token`, {
       method: 'POST',
       headers: {
@@ -25,6 +28,25 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(data, { status: response.status });
+    }
+
+    // If popup mode, modify the OAuth URL to redirect to popup callback
+    if (isPopup && data.oauth_url) {
+      const url = new URL(data.oauth_url);
+      const redirectUri = url.searchParams.get('redirect_uri');
+      
+      if (redirectUri) {
+        // Modify redirect_uri to point to popup callback
+        const redirectUrl = new URL(redirectUri);
+        redirectUrl.pathname = '/facebook/popup-callback';
+        url.searchParams.set('redirect_uri', redirectUrl.toString());
+        data.oauth_url = url.toString();
+      } else {
+        // If no redirect_uri in URL, try to add state parameter
+        // The backend should handle the redirect, but we can add a hint
+        url.searchParams.set('popup', 'true');
+        data.oauth_url = url.toString();
+      }
     }
 
     return NextResponse.json(data);
