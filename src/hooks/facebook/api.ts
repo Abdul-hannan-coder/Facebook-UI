@@ -16,11 +16,10 @@ export const facebookAPI = {
    */
   createToken: async (): Promise<string> => {
     try {
-      // Use fetch directly since apiClient.request is private
-      const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://backend.postsiva.com';
+      // Use Next.js API route to avoid CORS
       const token = apiClient.getToken();
       
-      const response = await fetch(`${baseURL}/facebook/create-token`, {
+      const response = await fetch('/api/facebook/create-token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,9 +50,12 @@ export const facebookAPI = {
   /**
    * Handle OAuth callback (usually called by backend redirect)
    * This endpoint is typically hit by the backend after Facebook redirects
+   * Note: The callback is usually handled directly by the backend, so this may not be needed
    */
   handleCallback: async (code?: string, state?: string): Promise<void> => {
     try {
+      // The OAuth callback is typically handled server-side by the backend
+      // This function is kept for compatibility but may not be used
       const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://backend.postsiva.com';
       const token = apiClient.getToken();
       
@@ -62,6 +64,7 @@ export const facebookAPI = {
       if (state) params.append('state', state);
 
       const queryString = params.toString();
+      // Note: This would need a proxy route if used, but typically backend handles this
       const url = `${baseURL}/facebook/oauth/callback${queryString ? `?${queryString}` : ''}`;
 
       const response = await fetch(url, {
@@ -89,10 +92,10 @@ export const facebookAPI = {
    */
   getPages: async (): Promise<FacebookPagesResponse> => {
     try {
-      const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://backend.postsiva.com';
+      // Use Next.js API route to avoid CORS
       const token = apiClient.getToken();
       
-      const response = await fetch(`${baseURL}/facebook/pages`, {
+      const response = await fetch('/api/facebook/pages', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -119,10 +122,10 @@ export const facebookAPI = {
    */
   getUserProfile: async (): Promise<FacebookUserProfile> => {
     try {
-      const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://backend.postsiva.com';
+      // Use Next.js API route to avoid CORS
       const token = apiClient.getToken();
       
-      const response = await fetch(`${baseURL}/facebook/user-profile/`, {
+      const response = await fetch('/api/facebook/user-profile', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

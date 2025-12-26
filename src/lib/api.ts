@@ -1,9 +1,9 @@
 /**
  * API Client for backend communication
- * Base URL: https://backend.postsiva.com
+ * Uses Next.js API routes to avoid CORS issues
  */
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://backend.postsiva.com';
+const BASE_URL = typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://backend.postsiva.com');
 
 export interface APIError {
   detail: string | Array<{
@@ -64,7 +64,7 @@ class APIClient {
     return response.json();
   }
 
-  // Auth methods
+  // Auth methods - use Next.js API routes to avoid CORS
   async login(email: string, password: string) {
     return this.request<{
       access_token: string;
@@ -78,7 +78,7 @@ class APIClient {
         updated_at: string;
         id: string;
       };
-    }>('/auth/login', {
+    }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
@@ -102,7 +102,7 @@ class APIClient {
         updated_at: string;
         id: string;
       };
-    }>('/auth/signup', {
+    }>('/api/auth/signup', {
       method: 'POST',
       body: JSON.stringify(data),
     });
