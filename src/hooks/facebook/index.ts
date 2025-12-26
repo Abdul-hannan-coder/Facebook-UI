@@ -8,6 +8,7 @@
 import { useReducer, useEffect, useCallback } from 'react';
 import { facebookReducer, initialState } from './reducers';
 import { facebookAPI } from './api';
+import { FacebookPage, FacebookUserProfile } from './types';
 
 export interface UseFacebookReturn {
   // State
@@ -24,7 +25,7 @@ export interface UseFacebookReturn {
   disconnectFacebook: () => void;
   fetchPages: () => Promise<void>;
   fetchUserProfile: () => Promise<void>;
-  checkToken: () => Promise<void>;
+  checkToken: () => Promise<boolean>;
   resetError: () => void;
 }
 
@@ -147,18 +148,20 @@ export const useFacebook = (): UseFacebookReturn => {
   /**
    * Check if user has valid Facebook token
    */
-  const checkToken = useCallback(async () => {
+  const checkToken = useCallback(async (): Promise<boolean> => {
     try {
       const hasToken = await facebookAPI.checkToken();
       dispatch({
         type: 'FACEBOOK_SET_TOKEN_STATUS',
         payload: { hasToken },
       });
+      return hasToken;
     } catch {
       dispatch({
         type: 'FACEBOOK_SET_TOKEN_STATUS',
         payload: { hasToken: false },
       });
+      return false;
     }
   }, []);
 
