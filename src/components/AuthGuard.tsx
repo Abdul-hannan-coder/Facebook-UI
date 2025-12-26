@@ -6,8 +6,8 @@
 'use client';
 
 import { useAuth } from '@/hooks/auth';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -20,30 +20,43 @@ export function AuthGuard({
 }: AuthGuardProps) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push(redirectTo);
+    // Only redirect once and only if we're not already on the redirect page
+    if (!isLoading && !isAuthenticated && !hasRedirected.current && pathname !== redirectTo) {
+      hasRedirected.current = true;
+      router.replace(redirectTo);
     }
-  }, [isAuthenticated, isLoading, router, redirectTo]);
+  }, [isAuthenticated, isLoading, router, redirectTo, pathname]);
 
+  // Reset redirect flag if auth state changes to authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      hasRedirected.current = false;
+    }
+  }, [isAuthenticated]);
+
+  // Show loading while checking auth
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-white">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>                                                   
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
   }
 
+  // Show loading while redirecting (but don't render children)
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-white">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirecting to login...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>                                                   
+          <p className="text-gray-600">Redirecting...</p>
         </div>
       </div>
     );

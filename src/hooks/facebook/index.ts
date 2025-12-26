@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useReducer, useEffect, useCallback } from 'react';
+import { useReducer, useCallback } from 'react';
 import { facebookReducer, initialState } from './reducers';
 import { facebookAPI } from './api';
 import { FacebookPage, FacebookUserProfile } from './types';
@@ -33,34 +33,11 @@ export const useFacebook = (): UseFacebookReturn => {
   const [state, dispatch] = useReducer(facebookReducer, initialState);
 
   /**
-   * Check for existing Facebook token on mount
+   * Check for existing Facebook token on mount (only once)
+   * This is now controlled by the component that uses it
    */
-  useEffect(() => {
-    const checkExistingToken = async () => {
-      try {
-        const hasToken = await facebookAPI.checkToken();
-        dispatch({
-          type: 'FACEBOOK_SET_TOKEN_STATUS',
-          payload: { hasToken },
-        });
-
-        if (hasToken) {
-          // If token exists, fetch pages and profile
-          await fetchPages();
-          await fetchUserProfile();
-        }
-      } catch {
-        // Token check failed, user needs to connect
-        dispatch({
-          type: 'FACEBOOK_SET_TOKEN_STATUS',
-          payload: { hasToken: false },
-        });
-      }
-    };
-
-    checkExistingToken();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Removed auto-initialization to prevent multiple checks
+  // Components should call checkToken() explicitly when needed
 
   /**
    * Initiate Facebook OAuth connection

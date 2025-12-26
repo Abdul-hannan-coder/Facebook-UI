@@ -22,11 +22,11 @@ export default function SignupPage() {
   });
   const [localError, setLocalError] = useState("");
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (only once)
   useEffect(() => {
     if (isAuthenticated) {
-      // Check Facebook token after signup
-      router.push("/check-facebook");
+      // Use replace to avoid adding to history
+      router.replace("/check-facebook");
     }
   }, [isAuthenticated, router]);
 

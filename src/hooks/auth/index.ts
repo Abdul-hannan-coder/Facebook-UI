@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useReducer, useEffect, useCallback } from 'react';
+import { useReducer, useEffect, useCallback, useRef } from 'react';
 import { authReducer, initialState } from './reducers';
 import { authAPI } from './api';
 import { LoginCredentials, SignupData, User } from './types';
@@ -27,9 +27,13 @@ export interface UseAuthReturn {
 
 export const useAuth = (): UseAuthReturn => {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  const hasInitialized = useRef(false);
 
-  // Initialize auth state from localStorage on mount
+  // Initialize auth state from localStorage on mount (only once)
   useEffect(() => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
     const token = authAPI.getToken();
     if (token) {
       // Token exists, but we need to verify it's valid
@@ -48,6 +52,9 @@ export const useAuth = (): UseAuthReturn => {
           localStorage.removeItem('user');
           authAPI.logout();
         }
+      } else {
+        // Token exists but no user, clear token
+        authAPI.logout();
       }
     }
   }, []);

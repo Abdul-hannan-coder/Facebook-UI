@@ -18,11 +18,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [localError, setLocalError] = useState("");
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (only once)
   useEffect(() => {
     if (isAuthenticated) {
-      // Check Facebook token after login
-      router.push("/check-facebook");
+      // Use replace to avoid adding to history
+      router.replace("/check-facebook");
     }
   }, [isAuthenticated, router]);
 
