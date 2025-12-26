@@ -75,19 +75,47 @@ export const useFacebook = (): UseFacebookReturn => {
 
         if (event.data.type === 'FACEBOOK_OAUTH_SUCCESS') {
           window.removeEventListener('message', messageHandler);
-          popup.close();
+          if (!popup.closed) {
+            popup.close();
+          }
           
-          // Refresh token status
-          checkToken().then(() => {
-            dispatch({ type: 'FACEBOOK_CONNECT_SUCCESS' });
-            // Fetch pages after successful connection
-            fetchPages().catch(() => {
-              // Error handled by hook
+          // Refresh token status and verify token was received
+          checkToken().then((hasToken) => {
+            if (hasToken) {
+              dispatch({ type: 'FACEBOOK_CONNECT_SUCCESS' });
+              // Fetch pages after successful connection
+              fetchPages().catch(() => {
+                // Error handled by hook
+              });
+              
+              // Redirect to dashboard if we're on connect page
+              if (typeof window !== 'undefined') {
+                const currentPath = window.location.pathname;
+                if (currentPath === '/connect-facebook' || currentPath.includes('connect')) {
+                  // Use router if available, otherwise use window.location
+                  setTimeout(() => {
+                    window.location.href = '/dashboard';
+                  }, 500);
+                }
+              }
+            } else {
+              // Token not received, show error
+              dispatch({
+                type: 'FACEBOOK_FAILURE',
+                payload: { error: 'Token not received. Please try again.' },
+              });
+            }
+          }).catch(() => {
+            dispatch({
+              type: 'FACEBOOK_FAILURE',
+              payload: { error: 'Failed to verify connection. Please try again.' },
             });
           });
         } else if (event.data.type === 'FACEBOOK_OAUTH_ERROR') {
           window.removeEventListener('message', messageHandler);
-          popup.close();
+          if (!popup.closed) {
+            popup.close();
+          }
           
           const errorMessage = event.data.error || 'Facebook connection failed';
           dispatch({

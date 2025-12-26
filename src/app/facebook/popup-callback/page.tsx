@@ -15,57 +15,51 @@ export default function FacebookPopupCallbackPage() {
         await new Promise((resolve) => setTimeout(resolve, 2000));
         
         // Check if token was successfully created
-        await checkToken();
+        const hasToken = await checkToken();
+        
+        if (!hasToken) {
+          throw new Error("Token not received from backend");
+        }
         
         // Try to fetch pages to verify connection
         try {
           await fetchPages();
-          setStatus("success");
-          
-          // Notify parent window of success
-          if (window.opener) {
-            window.opener.postMessage(
-              {
-                type: "FACEBOOK_OAUTH_SUCCESS",
-                payload: { message: "Facebook connected successfully" },
-              },
-              window.location.origin
-            );
-            
-            // Close popup after a short delay
-            setTimeout(() => {
-              window.close();
-            }, 1500);
-          } else {
-            // If no opener, redirect to dashboard
-            window.location.href = "/dashboard";
-          }
         } catch {
-          // Token might be valid but pages fetch failed
-          setStatus("success");
-          
-          if (window.opener) {
-            window.opener.postMessage(
-              {
-                type: "FACEBOOK_OAUTH_SUCCESS",
-                payload: { message: "Facebook connected successfully" },
+          // Pages fetch might fail, but token is valid
+          // This is okay, we can still consider it a success
+        }
+        
+        setStatus("success");
+        
+        // Notify parent window of success
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage(
+            {
+              type: "FACEBOOK_OAUTH_SUCCESS",
+              payload: { 
+                message: "Facebook connected successfully",
+                hasToken: true 
               },
-              window.location.origin
-            );
-            
-            setTimeout(() => {
-              window.close();
-            }, 1500);
-          }
+            },
+            window.location.origin
+          );
+          
+          // Close popup after a short delay
+          setTimeout(() => {
+            window.close();
+          }, 1000);
+        } else {
+          // If no opener, redirect to dashboard
+          window.location.href = "/dashboard";
         }
       } catch (err) {
         console.error("Callback processing error:", err);
         setStatus("error");
-        const errorMessage = err instanceof Error ? err.message : "Connection failed";
+        const errorMessage = err instanceof Error ? err.message : "Connection failed";                                                                          
         setError(errorMessage);
         
         // Notify parent window of error
-        if (window.opener) {
+        if (window.opener && !window.opener.closed) {
           window.opener.postMessage(
             {
               type: "FACEBOOK_OAUTH_ERROR",
@@ -76,6 +70,11 @@ export default function FacebookPopupCallbackPage() {
           
           setTimeout(() => {
             window.close();
+          }, 2000);
+        } else {
+          // If no opener, redirect to connect page
+          setTimeout(() => {
+            window.location.href = "/connect-facebook";
           }, 2000);
         }
       }

@@ -6,12 +6,25 @@
 'use client';
 
 import { useFacebook } from '@/hooks/facebook';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export function FacebookConnect() {
-  const { connectFacebook, isConnecting, error, resetError } = useFacebook();
+  const { connectFacebook, isConnecting, error, resetError, hasToken, isConnected } = useFacebook();
+  const router = useRouter();
   const [isConnectingState, setIsConnectingState] = useState(false);
   const [popupBlocked, setPopupBlocked] = useState(false);
+
+  // Redirect to dashboard if token is received (after popup closes)
+  useEffect(() => {
+    if (hasToken && isConnected && !isConnecting && !isConnectingState) {
+      // Small delay to ensure state is updated
+      const timer = setTimeout(() => {
+        router.replace('/dashboard');
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [hasToken, isConnected, isConnecting, isConnectingState, router]);
 
   const handleConnect = async () => {
     setIsConnectingState(true);
@@ -21,6 +34,7 @@ export function FacebookConnect() {
       await connectFacebook();
       // Popup will handle the OAuth flow
       // State will be updated via message listener
+      // Redirect will happen in useEffect when token is received
     } catch (err) {
       setIsConnectingState(false);
       const errorMessage = err instanceof Error ? err.message : 'Failed to connect Facebook';
@@ -76,9 +90,14 @@ export function FacebookConnect() {
         </button>
         
         {isConnecting || isConnectingState ? (
-          <p className="text-sm text-gray-500 text-center">
-            A popup window will open for Facebook authentication. Please complete the process in the popup.
-          </p>
+          <div className="space-y-2">
+            <p className="text-sm text-gray-500 text-center">
+              A popup window will open for Facebook authentication. Please complete the process in the popup.
+            </p>
+            <p className="text-xs text-gray-400 text-center">
+              After successful connection, you will be redirected to the dashboard.
+            </p>
+          </div>
         ) : null}
 
         <p className="text-sm text-gray-500 text-center">
