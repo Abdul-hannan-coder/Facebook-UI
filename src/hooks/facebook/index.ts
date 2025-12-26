@@ -40,6 +40,55 @@ export const useFacebook = (): UseFacebookReturn => {
   // Components should call checkToken() explicitly when needed
 
   /**
+   * Check if user has valid Facebook token
+   */
+  const checkToken = useCallback(async (): Promise<boolean> => {
+    try {
+      const hasToken = await facebookAPI.checkToken();
+      dispatch({
+        type: 'FACEBOOK_SET_TOKEN_STATUS',
+        payload: { hasToken },
+      });
+      return hasToken;
+    } catch {
+      dispatch({
+        type: 'FACEBOOK_SET_TOKEN_STATUS',
+        payload: { hasToken: false },
+      });
+      return false;
+    }
+  }, []);
+
+  /**
+   * Fetch Facebook pages
+   */
+  const fetchPages = useCallback(async () => {
+    dispatch({ type: 'FACEBOOK_START' });
+    try {
+      const response = await facebookAPI.getPages();
+      if (response.data && response.data.pages) {
+        dispatch({
+          type: 'FACEBOOK_PAGES_SUCCESS',
+          payload: { pages: response.data.pages },
+        });
+      } else {
+        dispatch({
+          type: 'FACEBOOK_FAILURE',
+          payload: { error: 'No pages found' },
+        });
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to fetch pages';
+      dispatch({
+        type: 'FACEBOOK_FAILURE',
+        payload: { error: errorMessage },
+      });
+      throw error;
+    }
+  }, []);
+
+  /**
    * Initiate Facebook OAuth connection
    * Opens Facebook OAuth in a popup window
    */
@@ -172,35 +221,6 @@ export const useFacebook = (): UseFacebookReturn => {
   }, []);
 
   /**
-   * Fetch Facebook pages
-   */
-  const fetchPages = useCallback(async () => {
-    dispatch({ type: 'FACEBOOK_START' });
-    try {
-      const response = await facebookAPI.getPages();
-      if (response.data && response.data.pages) {
-        dispatch({
-          type: 'FACEBOOK_PAGES_SUCCESS',
-          payload: { pages: response.data.pages },
-        });
-      } else {
-        dispatch({
-          type: 'FACEBOOK_FAILURE',
-          payload: { error: 'No pages found' },
-        });
-      }
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to fetch pages';
-      dispatch({
-        type: 'FACEBOOK_FAILURE',
-        payload: { error: errorMessage },
-      });
-      throw error;
-    }
-  }, []);
-
-  /**
    * Fetch Facebook user profile
    */
   const fetchUserProfile = useCallback(async () => {
@@ -221,26 +241,6 @@ export const useFacebook = (): UseFacebookReturn => {
         payload: { error: errorMessage },
       });
       throw error;
-    }
-  }, []);
-
-  /**
-   * Check if user has valid Facebook token
-   */
-  const checkToken = useCallback(async (): Promise<boolean> => {
-    try {
-      const hasToken = await facebookAPI.checkToken();
-      dispatch({
-        type: 'FACEBOOK_SET_TOKEN_STATUS',
-        payload: { hasToken },
-      });
-      return hasToken;
-    } catch {
-      dispatch({
-        type: 'FACEBOOK_SET_TOKEN_STATUS',
-        payload: { hasToken: false },
-      });
-      return false;
     }
   }, []);
 
