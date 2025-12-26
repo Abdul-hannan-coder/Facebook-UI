@@ -16,7 +16,6 @@ export const facebookAPI = {
    */
   createToken: async (): Promise<string> => {
     try {
-      // Use Next.js API route to avoid CORS
       const token = apiClient.getToken();
       
       const response = await fetch('/api/facebook/create-token', {
@@ -34,10 +33,11 @@ export const facebookAPI = {
         throw error;
       }
 
-      const data = await response.json() as FacebookOAuthResponse;
+      const data = await response.json();
 
-      if (data.oauth_url) {
-        return data.oauth_url;
+      // Backend returns nested structure: { success, message, data: { auth_url } }
+      if (data.success && data.data?.auth_url) {
+        return data.data.auth_url;
       }
 
       throw new Error('OAuth URL not received from server');
@@ -92,7 +92,6 @@ export const facebookAPI = {
    */
   getPages: async (): Promise<FacebookPagesResponse> => {
     try {
-      // Use Next.js API route to avoid CORS
       const token = apiClient.getToken();
       
       const response = await fetch('/api/facebook/pages', {
@@ -110,7 +109,14 @@ export const facebookAPI = {
         throw error;
       }
 
-      return await response.json() as FacebookPagesResponse;
+      const data = await response.json();
+      
+      // Backend returns nested structure: { success, message, data: { pages, count } }
+      if (data.success && data.data) {
+        return data.data;
+      }
+
+      return data;
     } catch (error: unknown) {
       const errorMessage = handleAPIError(error);
       throw new Error(errorMessage);
