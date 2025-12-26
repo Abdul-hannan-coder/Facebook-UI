@@ -17,7 +17,7 @@ import Image from "next/image";
 import { AuthGuard } from "@/components/AuthGuard";
 import { useFacebook } from "@/hooks/facebook";
 import { useAuth } from "@/hooks/auth";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 
 const stats = [
@@ -80,12 +80,16 @@ const itemVariants: Variants = {
 };
 
 export default function Dashboard() {
-  const { pages, fetchPages, isLoading: fbLoading, hasToken, isConnected } = useFacebook();
+  const { pages, fetchPages, isLoading: fbLoading, hasToken, isConnected } = useFacebook();                                                                     
   const { user } = useAuth();
+  const hasFetchedPages = useRef(false);
 
   useEffect(() => {
-    if (hasToken) {
-      fetchPages();
+    if (hasToken && !hasFetchedPages.current) {
+      hasFetchedPages.current = true;
+      fetchPages().catch(() => {
+        // Error handled by hook
+      });
     }
   }, [hasToken, fetchPages]);
 

@@ -38,15 +38,37 @@ export function FacebookTokenChecker({
     }
   }, [isAuthenticated, authLoading, checkToken]);
 
-  // Redirect based on token status (only once)
+  // Redirect based on token status (only once, after loading completes)
   useEffect(() => {
-    if (!authLoading && !fbLoading && isAuthenticated && !hasRedirected.current) {
-      if (hasToken && pathname !== redirectTo) {
+    // Wait for both auth and fb loading to complete
+    if (authLoading || fbLoading) return;
+    
+    // Only proceed if authenticated
+    if (!isAuthenticated) return;
+    
+    // Only redirect once
+    if (hasRedirected.current) return;
+    
+    // Check if we need to redirect
+    if (hasToken) {
+      // Has token - redirect to dashboard if not already there
+      if (pathname !== redirectTo) {
         hasRedirected.current = true;
-        router.replace(redirectTo);
-      } else if (!hasToken && pathname !== fallbackPath) {
+        // Small delay to prevent flickering
+        const timer = setTimeout(() => {
+          router.replace(redirectTo);
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      // No token - redirect to connect page if not already there
+      if (pathname !== fallbackPath) {
         hasRedirected.current = true;
-        router.replace(fallbackPath);
+        // Small delay to prevent flickering
+        const timer = setTimeout(() => {
+          router.replace(fallbackPath);
+        }, 100);
+        return () => clearTimeout(timer);
       }
     }
   }, [hasToken, fbLoading, authLoading, isAuthenticated, router, redirectTo, fallbackPath, pathname]);
@@ -77,7 +99,11 @@ export function FacebookTokenChecker({
   }
 
   // Show loading while redirecting
-  if (hasRedirected.current || (hasToken && pathname !== redirectTo) || (!hasToken && pathname !== fallbackPath)) {
+  const isRedirecting = hasRedirected.current || 
+    (hasToken && pathname !== redirectTo) || 
+    (!hasToken && pathname !== fallbackPath);
+
+  if (isRedirecting) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-white">
         <div className="text-center">
@@ -89,11 +115,13 @@ export function FacebookTokenChecker({
   }
 
   // Only render children if we're on the correct page
-  if ((hasToken && pathname === redirectTo) || (!hasToken && pathname === fallbackPath)) {
+  const isOnCorrectPage = (hasToken && pathname === redirectTo) || (!hasToken && pathname === fallbackPath);
+  
+  if (isOnCorrectPage) {
     return <>{children}</>;
   }
 
-  // Default: show loading
+  // Default: show loading (shouldn't reach here normally)
   return (
     <div className="flex items-center justify-center min-h-screen bg-white">
       <div className="text-center">

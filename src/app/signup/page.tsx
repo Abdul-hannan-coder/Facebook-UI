@@ -8,7 +8,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Navbar } from "@/components/sections/navbar";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/auth";
 
 export default function SignupPage() {
@@ -21,14 +21,15 @@ export default function SignupPage() {
     password: "",
   });
   const [localError, setLocalError] = useState("");
+  const hasRedirected = useRef(false);
 
   // Redirect if already authenticated (only once)
   useEffect(() => {
-    if (isAuthenticated) {
-      // Use replace to avoid adding to history
+    if (isAuthenticated && !hasRedirected.current && !isLoading) {
+      hasRedirected.current = true;
       router.replace("/check-facebook");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isLoading, router]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -25,9 +25,14 @@ export function AuthGuard({
 
   useEffect(() => {
     // Only redirect once and only if we're not already on the redirect page
+    // Also ensure we're not in a loading state
     if (!isLoading && !isAuthenticated && !hasRedirected.current && pathname !== redirectTo) {
       hasRedirected.current = true;
-      router.replace(redirectTo);
+      // Small delay to prevent flickering
+      const timer = setTimeout(() => {
+        router.replace(redirectTo);
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [isAuthenticated, isLoading, router, redirectTo, pathname]);
 
