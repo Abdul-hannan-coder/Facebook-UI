@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/auth/useAuth';
 import { useGoogleOAuth } from '@/lib/hooks/googleoauth/useGoogleOAuth';
+import { fetchFacebookToken } from '@/lib/hooks/facebook/token/api';
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -32,10 +33,24 @@ export default function LoginPage() {
     setError(null);
     try {
       await login({ email: formData.email, password: formData.password });
-      setShowSuccessPopup(true);
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1000);
+      
+      // Immediately check for Facebook token after login
+      try {
+        const fbTokenRes = await fetchFacebookToken();
+        const hasFacebookToken = fbTokenRes.success && fbTokenRes.data && Object.keys(fbTokenRes.data).length > 0;
+        const redirectPath = hasFacebookToken ? '/dashboard' : '/connect-facebook';
+        
+        setShowSuccessPopup(true);
+        setTimeout(() => {
+          router.push(redirectPath);
+        }, 1000);
+      } catch (fbErr) {
+        // If check fails, assume no token and redirect to connect page
+        setShowSuccessPopup(true);
+        setTimeout(() => {
+          router.push('/connect-facebook');
+        }, 1000);
+      }
     } catch (err: any) {
       setError(err.message ?? 'Invalid email or password. Please try again.');
     }
@@ -155,7 +170,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 disabled={googleLoading}
-                onClick={() => startGoogleLogin('/dashboard')}
+                onClick={() => startGoogleLogin('/auth/callback')}
                 className="w-full bg-white border-2 border-gray-200 text-gray-700 hover:border-purple-500 hover:text-purple-600 transition-all duration-300 rounded-lg py-3 font-medium flex items-center justify-center space-x-2 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
