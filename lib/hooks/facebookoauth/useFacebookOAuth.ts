@@ -13,14 +13,24 @@ export function useFacebookOAuth() {
     dispatch({ type: 'FACEBOOK_OAUTH_START' });
     try {
       const authUrl = await createFacebookAuthUrl();
-      // Open in a new tab so user can complete OAuth and come back
-      window.open(authUrl, '_blank', 'noopener,noreferrer');
-      dispatch({ type: 'FACEBOOK_OAUTH_SUCCESS' });
+      // Open Facebook OAuth in a new window (backend returns HTML page)
+      const popup = window.open(authUrl, 'facebook-oauth', 'width=600,height=700,scrollbars=yes,resizable=yes');
+      
+      if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+        throw new Error('Popup blocked. Please allow popups for this site and try again.');
+      }
+      
+      // Focus the popup
+      popup.focus();
+      
+      // Note: We don't set success here - the parent page will check for token
+      // when the popup closes or user completes OAuth
     } catch (err: any) {
       dispatch({
         type: 'FACEBOOK_OAUTH_ERROR',
         payload: err.message ?? 'Failed to start Facebook connection',
       });
+      throw err;
     }
   }, []);
 

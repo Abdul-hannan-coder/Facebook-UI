@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Facebook as FacebookIcon, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useFacebookOAuth } from '@/lib/hooks/facebookoauth/useFacebookOAuth';
@@ -9,13 +9,46 @@ import { useFacebookToken } from '@/lib/hooks/facebook/token/useFacebookToken';
 export default function ConnectFacebookPage() {
   const router = useRouter();
   const { connect, loading: connectLoading, error: connectError } = useFacebookOAuth();
-  const { hasToken, loading: tokenLoading, error: tokenError } = useFacebookToken();
+  const { hasToken, loading: tokenLoading, error: tokenError, reload: reloadToken } = useFacebookToken();
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!tokenLoading && hasToken) {
+      // Stop polling if token is found
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
       router.replace('/dashboard');
     }
   }, [tokenLoading, hasToken, router]);
+
+  // Cleanup poll interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const handleConnect = async () => {
+    try {
+      await connect();
+      // Start polling for token status after opening popup
+      // Check every 2 seconds if token exists
+      pollIntervalRef.current = setInterval(async () => {
+        try {
+          await reloadToken();
+          // The useEffect above will handle redirect if token is found
+        } catch (err) {
+          // Ignore polling errors
+        }
+      }, 2000);
+    } catch (err) {
+      // Error already handled by hook
+    }
+  };
 
   const showError = connectError || tokenError;
 
@@ -56,7 +89,7 @@ export default function ConnectFacebookPage() {
             <div className="w-full">
               <button
                 type="button"
-                onClick={() => connect()}
+                onClick={handleConnect}
                 disabled={connectLoading || tokenLoading}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 rounded-lg transition-all duration-300 shadow-lg shadow-purple-300/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base flex items-center justify-center space-x-2"
               >
